@@ -23,82 +23,37 @@ func parseStr(path string) [][]string {
 }
 
 func isEnd(slice [][]string, row, col int) bool {
-	fmt.Println(row, col)
-	if row >= len(slice) || row < 0 || col >= len(slice[0]) || col < 0 {
-		fmt.Println("REACHED END", row, col)
-		return true
-	}
-	return false
+	return row >= len(slice) || row < 0 || col >= len(slice[0]) || col < 0
 }
 
-func filter(res [][]int) [][]int {
-	newSlice := [][]int{}
-	table := make(map[string]bool)
+func walk(slice [][]string, row, col int) bool {
 
-	for _, slice := range res {
-		row, col := slice[0], slice[1]
-
-		if table[fmt.Sprintf("%d,%d", row, col)] {
-			continue
-		}
-		newSlice = append(newSlice, []int{row, col})
-		table[fmt.Sprintf("%d,%d", row, col)] = true
-	}
-	return newSlice
-}
-
-func walk(slice [][]string, row, col int) [][]int {
-
-	dir := "up"
-	res := [][]int{}
+	dirs := [][]int{{-1, 0}, {0, +1}, {+1, 0}, {0, -1}}
+	rowDir, colDir, index := -1, 0, 0
 
 	i := 0
 	for {
 		i++
-		res = append(res, []int{row, col})
-
-		if dir == "up" {
-			if row-1 < 0 || slice[row-1][col] == "#" {
-				if isEnd(slice, row-1, col) {
-					return res
-				}
-				dir = "right"
-			} else {
-				row = row - 1
-			}
+		if i > len(slice)*len(slice[0]) {
+			return false
 		}
-		if dir == "bottom" {
-			if row+1 >= len(slice) || slice[row+1][col] == "#" {
-				if isEnd(slice, row+1, col) {
-					return res
-				}
-				dir = "left"
+		if isEnd(slice, row+rowDir, col+colDir) {
+			return true
+		}
+		if slice[row+rowDir][col+colDir] == "#" {
+			if index == len(dirs)-1 {
+				index = 0
 			} else {
-				row = row + 1
+				index += 1
 			}
+
+			rowDir, colDir = dirs[index][0], dirs[index][1]
+
+		} else {
+			row += rowDir
+			col += colDir
 		}
 
-		if dir == "right" {
-			if col+1 >= len(slice[0]) || slice[row][col+1] == "#" {
-				if isEnd(slice, row, col+1) {
-					return res
-				}
-				dir = "bottom"
-			} else {
-				col = col + 1
-			}
-		}
-		if dir == "left" {
-
-			if col-1 < 0 || slice[row][col-1] == "#" {
-				if isEnd(slice, row, col-1) {
-					return res
-				}
-				dir = "up"
-			} else {
-				col = col - 1
-			}
-		}
 	}
 }
 
@@ -107,7 +62,6 @@ func findCord(sliced [][]string) (int, int) {
 	for rowIdx, rowValue := range sliced {
 		for colValue := range rowValue {
 			if sliced[rowIdx][colValue] == "^" {
-
 				return rowIdx, colValue
 			}
 		}
@@ -115,15 +69,33 @@ func findCord(sliced [][]string) (int, int) {
 	return 0, 0
 }
 
-func partOneAnswer(path string) {
+func partOneAnswer(path string) (total int) {
 	sliced := parseStr(path)
 	row, col := findCord(sliced)
 
-	res := walk(sliced, row, col)
+	for r := range sliced {
+		for c := range sliced[r] {
+			if sliced[r][c] == "^" {
+				continue
+			}
+			newSliced := make([][]string, len(sliced))
+			for i := range sliced {
+				newSliced[i] = make([]string, len(sliced[i]))
+				copy(newSliced[i], sliced[i]) // Copy each row
+			}
+			newSliced[r][c] = "#"
+			res := walk(newSliced, row, col)
+			if !res {
+				total++
+			}
+		}
 
-	fmt.Println(len(filter(res)))
+	}
+	return total
+
 }
 
 func main() {
-	partOneAnswer("input")
+	total := partOneAnswer("input")
+	fmt.Println(total)
 }
