@@ -11,44 +11,27 @@ func parseStr(path string) []string {
 	val, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := string(val)
 
-	mulSlice := strings.Split(str, "\r\n")
+	strSlice := strings.Split(str, "\r\n")
 
-	return mulSlice
+	return strSlice
 }
-
-// slice =  11 6 16 20
-// slice =  81 40 27
-func walk(numbers []int, index int, res *[][]string, operands []string) {
-	if index == len(numbers)-1 {
-		*res = append(*res, operands)
-		return
+func glueNumbers(a int, b int) int {
+	strRepresented := strconv.Itoa(a) + strconv.Itoa(b)
+	val, _ := strconv.Atoi(strRepresented)
+	return val
+}
+func walk(numbers []int, index int, target, total int) bool {
+	if index == len(numbers) {
+		return total == target
 	}
-	walk(numbers, index+1, res, append(operands, "+"))
-	walk(numbers, index+1, res, append(operands, "*"))
+	firstPath := walk(numbers, index+1, target, total+numbers[index])
+	secondPath := walk(numbers, index+1, target, total*numbers[index])
+
+	return firstPath || secondPath
 }
 func getCorrectEquationsCount(numbers []int, target int) bool {
-	operandsMatrix := [][]string{}
 
-	walk(numbers, 0, &operandsMatrix, []string{})
-
-	for _, operands := range operandsMatrix {
-		sum := numbers[0]
-		numIdx := 1
-		for _, operand := range operands {
-			if operand == "+" {
-				sum += numbers[numIdx]
-				numIdx++
-			}
-			if operand == "*" {
-				sum *= numbers[numIdx]
-				numIdx++
-			}
-		}
-		if sum == target {
-			return true
-		}
-	}
-	return false
+	return walk(numbers, 1, target, numbers[0])
 }
 func partOne(path string) {
 	roots := parseStr(path)
@@ -71,4 +54,5 @@ func partOne(path string) {
 }
 func main() {
 	partOne("input")
+	fmt.Println(glueNumbers(15, 6))
 }
