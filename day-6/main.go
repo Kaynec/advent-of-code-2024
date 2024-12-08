@@ -24,7 +24,7 @@ func parseStr(path string) [][]string {
 
 func isEnd(slice [][]string, row, col int) bool {
 	fmt.Println(row, col)
-	if slice[row][col] == "#" || row >= len(slice) || row < 0 || col >= len(slice[0]) || col < 0 {
+	if row >= len(slice) || row < 0 || col >= len(slice[0]) || col < 0 {
 		fmt.Println("REACHED END", row, col)
 		return true
 	}
@@ -59,7 +59,7 @@ func walk(slice [][]string, row, col int) [][]int {
 
 		if dir == "up" {
 			if row-1 < 0 || slice[row-1][col] == "#" {
-				if isEnd(slice, row, col+1) {
+				if isEnd(slice, row-1, col) {
 					return res
 				}
 				dir = "right"
@@ -69,7 +69,7 @@ func walk(slice [][]string, row, col int) [][]int {
 		}
 		if dir == "bottom" {
 			if row+1 >= len(slice) || slice[row+1][col] == "#" {
-				if isEnd(slice, row, col-1) {
+				if isEnd(slice, row+1, col) {
 					return res
 				}
 				dir = "left"
@@ -80,7 +80,7 @@ func walk(slice [][]string, row, col int) [][]int {
 
 		if dir == "right" {
 			if col+1 >= len(slice[0]) || slice[row][col+1] == "#" {
-				if isEnd(slice, row+1, col) {
+				if isEnd(slice, row, col+1) {
 					return res
 				}
 				dir = "bottom"
@@ -91,7 +91,7 @@ func walk(slice [][]string, row, col int) [][]int {
 		if dir == "left" {
 
 			if col-1 < 0 || slice[row][col-1] == "#" {
-				if isEnd(slice, row-1, col) {
+				if isEnd(slice, row, col-1) {
 					return res
 				}
 				dir = "up"
