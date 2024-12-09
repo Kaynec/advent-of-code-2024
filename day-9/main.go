@@ -12,71 +12,34 @@ func toNum(char string) int {
 	val, _ := strconv.Atoi(char)
 	return val
 }
-func toStr(val int) string {
-	return fmt.Sprintf("%d", val)
-}
 
-// func compareCords(){
-
-// }
-
-func findAllSubstringNotDot(str []any) [][]int {
-
-	res := [][]int{}
-
-	for i := 0; i < len(str); i++ {
-		if str[i] == "." {
-			continue
-		}
-		for j := i; j < len(str); j++ {
-			if str[j] != str[i] || j == len(str)-1 {
-				if j == len(str)-1 {
-
-					res = append(res, []int{i, len(str)})
-					i = j
-				} else {
-					res = append(res, []int{i, j})
-					i = j - 1
-				}
-				break
-			}
-		}
-	}
-
-	return res
-
-}
-
-func findAllSubstring(str []any) [][]int {
+func findAllSubstring(str []any, char any) [][]int {
 
 	res := [][]int{}
 
 	for i := 0; i < len(str)-1; i++ {
-		if str[i] == "." {
+		if str[i] != char {
+			continue
+		}
 
-			for j := i; j < len(str)-1; j++ {
-				if str[j] != "." {
-					res = append(res, []int{i, j})
-					i = j
-					break
-				}
+		for j := i; j < len(str); j++ {
+			if str[j] == char && j != len(str)-1 {
+				continue
 			}
-
+			if j == len(str)-1 {
+				res = append(res, []int{i, j + 1})
+				i = j - 1
+			} else {
+				res = append(res, []int{i, j})
+				i = j
+			}
+			break
 		}
 
 	}
 
 	return res
 
-}
-
-func unshift[T any](slice *[]T) T {
-
-	unshift := (*slice)[0]
-
-	*slice = (*slice)[1:]
-
-	return unshift
 }
 
 func parseStr(path string) [][]int {
@@ -98,55 +61,15 @@ func parseStr(path string) [][]int {
 	return lineMatrix
 }
 
-func answer(path string) int {
+func getAnswer(path string) int {
 	matrix := parseStr(path)
 
-	str := []any{}
+	str := extrctSliceFromTupleInt(matrix)
+	eCord := findAllSubstring(str, ".")
 
-	emptyCord := []int{}
-	for id, slice := range matrix {
+	normalCords := getNormalCards(str)
 
-		for i := 0; i < slice[0]; i++ {
-
-			str = append(str, id)
-		}
-		len := len(str)
-		for i := 0; i < slice[1]; i++ {
-
-			str = append(str, ".")
-
-			emptyCord = append(emptyCord, len+i)
-		}
-	}
-	eCord := findAllSubstring(str)
-	cords := findAllSubstringNotDot(str)
-
-	slices.Reverse(cords)
-
-	for _, cord := range cords {
-
-		cordItem := str[cord[0]]
-
-		for index, e := range eCord {
-			len := e[1] - e[0]
-			diff := cord[1] - cord[0]
-			if diff <= len && cord[0] > e[0] {
-				for i := 0; i < diff; i++ {
-					str[i+e[0]] = cordItem
-					str[i+cord[0]] = "."
-				}
-
-				if len == diff {
-					fmt.Println(len == diff)
-					eCord = append(eCord[0:index], eCord[index+1:]...)
-				} else {
-					e[0] = e[0] + cord[1] - cord[0]
-				}
-				break
-
-			}
-		}
-	}
+	formFinalResult(normalCords, str, eCord)
 
 	total := 0
 
@@ -159,14 +82,78 @@ func answer(path string) int {
 		}
 	}
 
-	fmt.Println(total)
-	return 0
+	return total
 
+}
+
+func formFinalResult(normalCords [][]int, str []any, eCord [][]int) {
+	for _, cord := range normalCords {
+
+		cordItem := str[cord[0]]
+
+		for index, e := range eCord {
+			len := e[1] - e[0]
+			diff := cord[1] - cord[0]
+			if diff > len || cord[0] < e[0] {
+				continue
+			}
+			for i := 0; i < diff; i++ {
+				str[i+e[0]] = cordItem
+				str[i+cord[0]] = "."
+			}
+
+			if len == diff {
+				// remove the filled dots slice
+				eCord = append(eCord[0:index], eCord[index+1:]...)
+			} else {
+				// or modify it if doesn't fit
+				e[0] = e[0] + cord[1] - cord[0]
+			}
+			break
+
+		}
+	}
+}
+
+func extrctSliceFromTupleInt(matrix [][]int) []any {
+	str := []any{}
+
+	for id, slice := range matrix {
+
+		for i := 0; i < slice[0]; i++ {
+
+			str = append(str, id)
+		}
+		for i := 0; i < slice[1]; i++ {
+
+			str = append(str, ".")
+		}
+	}
+	return str
+}
+
+func getNormalCards(str []any) [][]int {
+	table := make(map[int]bool)
+
+	var normalCords [][]int
+	for i := range str {
+		if num, ok := str[i].(int); ok {
+			if table[num] {
+				continue
+			}
+			normalCords = append(normalCords, findAllSubstring(str, num)...)
+
+			table[num] = true
+		}
+	}
+	slices.Reverse(normalCords)
+	return normalCords
 }
 func main() {
 	path := "sample"
 	if os.Args[1:] != nil && os.Args[1:][0] != "" {
 		path = os.Args[1:][0]
 	}
-	fmt.Println(answer(path))
+	result := getAnswer(path)
+	fmt.Println(result)
 }
