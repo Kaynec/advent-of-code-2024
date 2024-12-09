@@ -6,70 +6,59 @@ import (
 	"strings"
 )
 
+const UNREACHABLE_NUMBER = 1000
+
 func parseStr(path string) [][]string {
 	val, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := string(val)
 
-	var sliced [][]string
+	var lineMatrix [][]string
 
-	mulSlice := strings.Split(str, "\r\n")
+	lines := strings.Split(str, "\r\n")
 
-	for _, rowVal := range mulSlice {
+	for _, rowVal := range lines {
 
-		sliced = append(sliced, strings.Split(rowVal, ""))
+		lineMatrix = append(lineMatrix, strings.Split(rowVal, ""))
 	}
 
-	return sliced
+	return lineMatrix
 }
 
-func appendIfInBound(cord []int, locs *[][]int, slice [][]string, table map[string]bool) {
-	if cord[1] == 0 {
-		fmt.Println("ZERO BASED")
+func isInBound(slice [][]string, cord []int) bool {
+
+	if cord[0] < len(slice) && cord[0] >= 0 && cord[1] < len(slice[0]) && cord[1] >= 0 {
+
+		return true
 	}
-	tableTemplate := fmt.Sprintf("%d:%d", cord[0], cord[1])
-	_, alreadyExist := table[tableTemplate]
-	if cord[0] < len(slice) && cord[0] >= 0 && cord[1] < len(slice[0]) && cord[1] >= 0 && !alreadyExist {
+
+	return false
+}
+
+func appendToList(cord []int, locs *[][]int, slice [][]string, table map[string]bool) {
+	key := fmt.Sprintf("%d:%d", cord[0], cord[1])
+	if isInBound(slice, cord) && !table[key] {
 		*locs = append(*locs, cord)
-		table[tableTemplate] = true
+		table[key] = true
 	}
 }
 
-func walk(cord []int, nextCord []int, table map[string]bool, strSlice [][]string, goodLocs [][]int) {
-	rowDiff := cord[0] - nextCord[0]
-	colDiff := cord[1] - nextCord[1]
-
-	for k := 0; k < 1000000000000000000; k++ {
-		cord := []int{rowDiff + cord[0], colDiff + cord[1]}
-		if cord[0] > len(strSlice) || cord[0] < 0 || cord[1] > len(strSlice[0]) || cord[1] < 1 {
-			break
-		}
-		appendIfInBound(cord, &goodLocs, strSlice, table)
-
-		rowDiff = (cord[0] - nextCord[0]) * k
-		colDiff = (cord[1] - nextCord[1]) * k
-	}
-}
 func getGoodLocsCount(strSlice [][]string, char string, table map[string]bool) [][]int {
-	charLocs := [][]int{}
+	charactors := [][]int{}
 	goodLocs := [][]int{}
 	for lineIndex, line := range strSlice {
 		for el := range line {
 
 			if strSlice[lineIndex][el] == char {
-				charLocs = append(charLocs, []int{lineIndex, el})
-				appendIfInBound([]int{lineIndex, el}, &goodLocs, strSlice, table)
+				charactors = append(charactors, []int{lineIndex, el})
+				appendToList([]int{lineIndex, el}, &goodLocs, strSlice, table)
 			}
 		}
 	}
-	for i := 0; i < len(charLocs)-1; i++ {
+	for i := 0; i < len(charactors)-1; i++ {
 
-		for j := i; j < len(charLocs)-1; j++ {
-			curr := charLocs[i]
-			next := charLocs[j+1]
-
-			walk(curr, next, table, strSlice, goodLocs)
-			walk(next, curr, table, strSlice, goodLocs)
-
+		for j := i + 1; j < len(charactors); j++ {
+			generatePaths(charactors[i], charactors[j], &goodLocs, strSlice, table)
+			generatePaths(charactors[j], charactors[i], &goodLocs, strSlice, table)
 		}
 
 	}
@@ -77,33 +66,54 @@ func getGoodLocsCount(strSlice [][]string, char string, table map[string]bool) [
 	return goodLocs
 }
 
-func getAllChars(slice [][]string) (res []string) {
-	table := make(map[string]bool)
+func generatePaths(start, end []int, goodLocs *[][]int, slice [][]string, table map[string]bool) {
+	// ABS MEANS math.abs()
+	rowABS := start[0] - end[0]
+	colABS := start[1] - end[1]
+
+	for k := 0; k < UNREACHABLE_NUMBER; k++ {
+		// adding the needed amount of differences
+		cord := []int{(rowABS + start[0]) + (rowABS * k), (colABS + start[1]) + (colABS * k)}
+
+		appendToList(cord, goodLocs, slice, table)
+
+		if !isInBound(slice, cord) {
+			return
+		}
+
+	}
+
+}
+
+func getAllChars(slice [][]string) []string {
+	charSet := make(map[string]bool)
+	chars := []string{}
 
 	for row := range slice {
 		for col := range slice[row] {
-			if slice[row][col] != "." && !table[slice[row][col]] {
-
-				res = append(res, slice[row][col])
+			if slice[row][col] == "." {
+				continue
 			}
-			table[slice[row][col]] = true
+			if !charSet[slice[row][col]] {
+				chars = append(chars, slice[row][col])
+			}
+			charSet[slice[row][col]] = true
 		}
 	}
 
-	return res
+	return chars
 }
-func partOne(path string) {
-	table, strSlice, goodLocs := make(map[string]bool), parseStr(path), [][]int{}
+func answer(path string) int {
+	table := make(map[string]bool)
+	strSlice := parseStr(path)
+	var goodLocs [][]int
 
 	for _, char := range getAllChars(strSlice) {
 		goodLocs = append(goodLocs, getGoodLocsCount(strSlice, char, table)...)
 
 	}
 
-	// SORTING MIGHT BE NECCACARY
-	// sort.Slice(goodLocs, func(i, j int) bool { return goodLocs[i][0] < goodLocs[j][0] })
-
-	fmt.Print(goodLocs, len(goodLocs))
+	return len(goodLocs)
 
 }
 func main() {
@@ -112,5 +122,5 @@ func main() {
 	if os.Args[1:] != nil && os.Args[1:][0] != "" {
 		path = os.Args[1:][0]
 	}
-	partOne(path)
+	fmt.Println(answer(path))
 }
