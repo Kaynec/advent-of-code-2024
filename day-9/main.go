@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -13,6 +14,60 @@ func toNum(char string) int {
 }
 func toStr(val int) string {
 	return fmt.Sprintf("%d", val)
+}
+
+// func compareCords(){
+
+// }
+
+func findAllSubstringNotDot(str []any) [][]int {
+
+	res := [][]int{}
+
+	for i := 0; i < len(str); i++ {
+		if str[i] == "." {
+			continue
+		}
+		for j := i; j < len(str); j++ {
+			if str[j] != str[i] || j == len(str)-1 {
+				if j == len(str)-1 {
+
+					res = append(res, []int{i, len(str)})
+					i = j
+				} else {
+					res = append(res, []int{i, j})
+					i = j - 1
+				}
+				break
+			}
+		}
+	}
+
+	return res
+
+}
+
+func findAllSubstring(str []any) [][]int {
+
+	res := [][]int{}
+
+	for i := 0; i < len(str)-1; i++ {
+		if str[i] == "." {
+
+			for j := i; j < len(str)-1; j++ {
+				if str[j] != "." {
+					res = append(res, []int{i, j})
+					i = j
+					break
+				}
+			}
+
+		}
+
+	}
+
+	return res
+
 }
 
 func unshift[T any](slice *[]T) T {
@@ -63,39 +118,55 @@ func answer(path string) int {
 			emptyCord = append(emptyCord, len+i)
 		}
 	}
-	length := len(emptyCord)
+	eCord := findAllSubstring(str)
+	cords := findAllSubstringNotDot(str)
 
-	right := len(str) - 1
-	for right >= 0 {
-		if len(emptyCord) <= 0 {
-			break
+	slices.Reverse(cords)
+
+	for _, cord := range cords {
+
+		cordItem := str[cord[0]]
+
+		for index, e := range eCord {
+			len := e[1] - e[0]
+			diff := cord[1] - cord[0]
+			if diff <= len && cord[0] > e[0] {
+				for i := 0; i < diff; i++ {
+					str[i+e[0]] = cordItem
+					str[i+cord[0]] = "."
+				}
+
+				if len == diff {
+					fmt.Println(len == diff)
+					eCord = append(eCord[0:index], eCord[index+1:]...)
+				} else {
+					e[0] = e[0] + cord[1] - cord[0]
+				}
+				break
+
+			}
 		}
-		if str[right] == "." {
-			emptyCord = append(emptyCord, right)
-			right--
-			continue
-		}
-
-		unshifted := unshift(&emptyCord)
-		str[unshifted] = str[right]
-		str[right] = str[unshifted]
-		right--
-
 	}
 
-	//
 	total := 0
-	for multiplier, number := range str[:len(str)-length] {
-		if s, ok := number.(int); ok {
+
+	for multiplier, value := range str {
+		if value == "." {
+			continue
+		}
+		if s, ok := value.(int); ok {
 			total += multiplier * s
 		}
 	}
 
 	fmt.Println(total)
-
 	return 0
 
 }
 func main() {
-	answer("input")
+	path := "sample"
+	if os.Args[1:] != nil && os.Args[1:][0] != "" {
+		path = os.Args[1:][0]
+	}
+	fmt.Println(answer(path))
 }
