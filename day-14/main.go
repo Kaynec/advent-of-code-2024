@@ -113,6 +113,15 @@ func getAnswer(path string, times int) int {
 	}
 	// fmt.Println(one * two * three * four)
 	fmt.Println(matrix)
+
+	file, _ := os.OpenFile("data", 1, 0644)
+
+	for row := range matrix {
+
+		file.WriteString(fmt.Sprintf("%x \r\n", matrix[row]))
+	}
+
+	file.Close()
 	return total
 }
 func getStringFromNum(char string) string {
