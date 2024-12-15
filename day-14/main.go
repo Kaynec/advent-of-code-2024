@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"sort"
-
-	// "sort"
 	"strconv"
 	"strings"
+
 )
 
 func stringToInt(char string) int {
@@ -16,8 +14,7 @@ func stringToInt(char string) int {
 	return val
 }
 
-const ROW = 103
-const COL = 101
+const ROW, COL = 103, 101
 
 type Robot struct {
 	x  int
@@ -82,7 +79,8 @@ func getAnswer(path string) int {
 
 	total := 0
 
-	for times := 10; times < 11000; times++ {
+	for time := 0; time < ROW*COL; time += 3 {
+		fmt.Println(time)
 		res := [][][]int{}
 		table := make(map[string]bool)
 		matrix := [][]int{}
@@ -94,40 +92,25 @@ func getAnswer(path string) int {
 		}
 
 		for _, robot := range robots {
-			yres := int(math.Abs(float64((robot.vy * times) % len(matrix))))
-			xres := int(math.Abs(float64((robot.vx * times) % COL)))
+			yres := int(math.Abs(float64((robot.vy * time) % len(matrix))))
+			xres := int(math.Abs(float64((robot.vx * time) % COL)))
+
 			if robot.vy < 0 {
-				if robot.y-yres < 0 {
-					robot.y += len(matrix) - yres
-				} else {
-					robot.y -= yres
-				}
+				robot.y = (robot.y - yres + len(matrix)) % len(matrix)
 			}
 			if robot.vy > 0 {
-				if robot.y+yres >= len(matrix) {
-					robot.y -= len(matrix) - yres
-				} else {
-					robot.y += yres
-				}
+				robot.y = (robot.y + yres) % len(matrix)
 			}
 			if robot.vx < 0 {
-				if robot.x-xres < 0 {
-					robot.x += COL - xres
-				} else {
-					robot.x -= xres
-				}
+				robot.x = (robot.x - xres + COL) % COL
 			}
 			if robot.vx > 0 {
-				if robot.x+xres >= COL {
-					robot.x -= COL - xres
-				} else {
-					robot.x += xres
-				}
+				robot.x = (robot.x + xres) % COL
 			}
 			matrix[robot.y][robot.x] += 1
 		}
+		res = append(res, [][]int{})
 		for row := range matrix {
-			res = append(res, [][]int{})
 			for col := range matrix[row] {
 				key := fmt.Sprintf("%d,%d", row, col)
 
@@ -136,26 +119,15 @@ func getAnswer(path string) int {
 				}
 
 				result := returnGetShapeResult(matrix, row, col, table)
-				if len(result) > 1 {
+				// assming xmas tree is atleast that long
+				if len(result) > 20 {
 					res = append(res, result)
-
 				}
 			}
 		}
 
 	outer:
 		for row := range res {
-			sort.Slice(res[row], func(i, j int) bool {
-				if res[row][i][0] == res[row][j][0] {
-					if res[row][i][1] > res[row][j][1] {
-						return false
-					} else {
-						return true
-					}
-				} else {
-					return res[row][i][0] < res[row][j][0]
-				}
-			})
 
 			if len(res[row]) < 12 {
 				continue
@@ -166,10 +138,6 @@ func getAnswer(path string) int {
 			str := []string{}
 			cords := [][][]int{}
 			maxDistance := 0
-
-			if times != 7083 {
-				continue
-			}
 
 			for index, matrix := range res[row] {
 
@@ -196,7 +164,6 @@ func getAnswer(path string) int {
 
 			for index, cord := range cords {
 				padding := 0
-				sort.Slice(cord, func(i, j int) bool { return i < j })
 				firstItem, lastItem := cord[0][1], cord[len(cord)-1][1]
 
 				if index == 0 {
@@ -204,16 +171,11 @@ func getAnswer(path string) int {
 				}
 				lastListFirstItem, lastListLastItem := cords[index-1][0], cords[index-1][len(cords[index-1])-1]
 
-				// if length is the same for more than 3 times, then it is a line
-
 				// it's bigger
 				if firstItem < lastListFirstItem[1] {
 					padding = (lastItem - firstItem) - len(cords[index-1])
 
-					if lastListFirstItem[1] != firstItem+padding {
-						break outer
-					}
-					if lastListLastItem[1] != lastItem-padding {
+					if lastListLastItem[1] != lastItem-padding || lastListFirstItem[1] != firstItem+padding {
 						break outer
 					}
 
@@ -222,11 +184,7 @@ func getAnswer(path string) int {
 				if firstItem > lastListFirstItem[1] {
 					padding = (len(cords[index-1]) - (lastItem - firstItem)) / 2
 
-					if firstItem != lastListFirstItem[1]+padding {
-						break outer
-
-					}
-					if lastItem != lastListLastItem[1]-padding {
+					if firstItem != lastListFirstItem[1]+padding || lastItem != lastListLastItem[1]-padding {
 						break outer
 					}
 				}
@@ -236,7 +194,7 @@ func getAnswer(path string) int {
 					continue outer
 				}
 			}
-			return times
+			return time
 		}
 
 	}
