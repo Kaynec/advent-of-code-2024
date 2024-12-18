@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -31,19 +32,12 @@ func stringToInt(char string) int {
 	val, _ := strconv.Atoi(char)
 	return val
 }
-func parseStr(path string) [][]any {
+func parseStr(path string) [][]string {
 	data, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := strings.TrimSpace(string(data))
-	matrix := [][]any{}
-	for index, line := range strings.Split(str, "\r\n") {
-		matrix = append(matrix, []any{})
-		for _, col := range strings.Split(line, "") {
-			if col == "." {
-				matrix[index] = append(matrix[index], 0)
-			} else {
-				matrix[index] = append(matrix[index], col)
-			}
-		}
+	matrix := [][]string{}
+	for _, line := range strings.Split(str, "\r\n") {
+		matrix = append(matrix, strings.Split(line, ""))
 	}
 	return matrix
 }
@@ -52,65 +46,92 @@ func parseStr(path string) [][]any {
 // 	return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
 // }
 
-func checkAdjacent(matrix [][]any, queue *[][]int, row, col int) {
-	paint(matrix, queue, row+1, col, matrix[row][col])
-	paint(matrix, queue, row-1, col, matrix[row][col])
-	paint(matrix, queue, row, col+1, matrix[row][col])
-	paint(matrix, queue, row, col-1, matrix[row][col])
-}
-func paint(matrix [][]any, queue *[][]int, row, col int, oldValue any) {
-	if matrix[row][col] == "E" || matrix[row][col] == "S" || matrix[row][col] == "#" {
-		return
-	}
-	if matrix[row][col] == 0 {
-		val, ok := oldValue.(int)
-		if !ok {
-			val = 0
-		}
-		matrix[row][col] = val + 1
-		*queue = append(*queue, []int{row, col})
-	}
-}
-func pointMatrix(matrix [][]any, row, col int) {
+// func checkAdjacent(matrix [][]any, queue *[][]int, row, col int) {
+// 	paint(matrix, queue, row+1, col, matrix[row][col])
+// 	paint(matrix, queue, row-1, col, matrix[row][col])
+// 	paint(matrix, queue, row, col+1, matrix[row][col])
+// 	paint(matrix, queue, row, col-1, matrix[row][col])
+// }
+// func paint(matrix [][]any, queue *[][]int, row, col int, oldValue any) {
+// 	if matrix[row][col] == "E" || matrix[row][col] == "S" || matrix[row][col] == "#" {
+// 		return
+// 	}
+// 	if matrix[row][col] == 0 {
+// 		val, ok := oldValue.(int)
+// 		if !ok {
+// 			val = 0
+// 		}
+// 		matrix[row][col] = val + 1
+// 		*queue = append(*queue, []int{row, col})
+// 	}
+// }
+// func pointMatrix(matrix [][]any, row, col int) {
 
-	queue := [][]int{{row, col}}
+// 	queue := [][]int{{row, col}}
 
-	for len(queue) > 0 {
-		shift := queue[0]
-		newRow, newCol := shift[0], shift[1]
-		queue = queue[1:]
-		checkAdjacent(matrix, &queue, newRow, newCol)
-	}
-}
+// 	for len(queue) > 0 {
+// 		shift := queue[0]
+// 		newRow, newCol := shift[0], shift[1]
+// 		queue = queue[1:]
+// 		checkAdjacent(matrix, &queue, newRow, newCol)
+// 	}
+// }
 
-func isInBound(matrix [][]any, row, col int) bool {
+func isInBound(matrix [][]string, row, col int) bool {
 	return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
 }
-func getPointFromCord(matrix [][]any, row, col, lastVal int, table map[string]bool, count, allCount *int) {
+func getPointFromCord(matrix [][]string, row, col int, table map[string]bool, res [][]int, count, allCount *int, dir string) {
 
 	key := fmt.Sprintf("%d,%d", row, col)
 	if !isInBound(matrix, row, col) || matrix[row][col] == "#" {
 		return
 	}
 	if matrix[row][col] == "E" {
-		fmt.Println(*count)
-		fmt.Println("AT LAST")
-	}
-	if matrix[row][col] != lastVal-1 {
+		sort.Slice(res, func(i, j int) bool {
+			return res[i][0] < res[j][0]
+		})
+		fmt.Println(*allCount, len(res))
 		return
 	}
+
 	if table[key] {
 		return
 	}
 
-	*count += 1
-	tmp := matrix[row][col].(int)
-	table[key] = true
+	// if changeDirection {
+	// 	*count += 1
+	// } else {
+	// }
+	*allCount += 1
 
-	getPointFromCord(matrix, row+1, col, tmp, table, count, allCount)
-	getPointFromCord(matrix, row-1, col, tmp, table, count, allCount)
-	getPointFromCord(matrix, row, col+1, tmp, table, count, allCount)
-	getPointFromCord(matrix, row, col-1, tmp, table, count, allCount)
+	table[key] = true
+	res = append(res, []int{row, col})
+
+	// oldDir := dir
+
+	dirs := [][]int{
+		{-1, 0},
+		{1, 0},
+		{0, -1},
+		{0, 1},
+	}
+	for _, direction := range dirs {
+		dirRow, dirCol := direction[0], direction[1]
+		getPointFromCord(matrix, row+dirRow, col+dirCol, table, res, count, allCount, dir)
+
+		// 	rowDiff, colDiff := math.Abs(float64(row+dirRow)), math.Abs(float64(col+dirCol))
+		// 	if rowDiff != 0 {
+		// 		dir = "Y"
+		// 	} else if colDiff != 0 {
+		// 		dir = "X"
+		// 	}
+		// 	if oldDir != dir {
+		// 		getPointFromCord(matrix, row+dirRow, col+dirCol, table, res, count, allCount, dir)
+		// 	} else {
+		// 		getPointFromCord(matrix, row+dirRow, col+dirCol, table, res, count, allCount, dir)
+		// 	}
+
+	}
 
 }
 
@@ -118,9 +139,7 @@ func getAnswer(path string) int {
 	matrix := parseStr(path)
 
 	total := 0
-	// 1,13
-	// print3d(matrix)
-	pointMatrix(matrix, 1, 13)
+
 	print3d(matrix)
 
 	dirs := [][]int{
@@ -130,14 +149,12 @@ func getAnswer(path string) int {
 		{0, 1},
 	}
 	row, col := 12, 1
-	for _, dir := range dirs {
+	for range dirs {
+		res := [][]int{}
+		dir := ""
 		table := map[string]bool{}
-
-		val, ok := matrix[row+dir[0]][col+dir[1]].(int)
 		count, allCount := 0, 0
-		if ok {
-			getPointFromCord(matrix, row+dir[0], col+dir[1], val+1, table, &count, &allCount)
-		}
+		getPointFromCord(matrix, row, col, table, res, &count, &allCount, dir)
 	}
 
 	// for _, val := range table {
