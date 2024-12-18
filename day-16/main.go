@@ -9,8 +9,22 @@ import (
 )
 
 func print3d[T any](matrix [][]T) {
+	newMatrix := [][]string{}
 	for row := range matrix {
-		fmt.Println(matrix[row])
+		newMatrix = append(newMatrix, []string{})
+		for _, col := range matrix[row] {
+			val, ok := any(col).(string)
+			if ok {
+				newMatrix[row] = append(newMatrix[row], fmt.Sprintf("%3s", val))
+			}
+
+			num, isOk := any(col).(int)
+			if isOk {
+
+				newMatrix[row] = append(newMatrix[row], fmt.Sprintf("%3d", num))
+			}
+		}
+		fmt.Println(newMatrix[row])
 	}
 }
 func stringToInt(char string) int {
@@ -33,84 +47,99 @@ func parseStr(path string) [][]any {
 	}
 	return matrix
 }
+
+// func isInBound(matrix [][]any, row, col int) bool {
+// 	return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
+// }
+
+func checkAdjacent(matrix [][]any, queue *[][]int, row, col int) {
+	paint(matrix, queue, row+1, col, matrix[row][col])
+	paint(matrix, queue, row-1, col, matrix[row][col])
+	paint(matrix, queue, row, col+1, matrix[row][col])
+	paint(matrix, queue, row, col-1, matrix[row][col])
+}
+func paint(matrix [][]any, queue *[][]int, row, col int, oldValue any) {
+	if matrix[row][col] == "E" || matrix[row][col] == "S" || matrix[row][col] == "#" {
+		return
+	}
+	if matrix[row][col] == 0 {
+		val, ok := oldValue.(int)
+		if !ok {
+			val = 0
+		}
+		matrix[row][col] = val + 1
+		*queue = append(*queue, []int{row, col})
+	}
+}
+func pointMatrix(matrix [][]any, row, col int) {
+
+	queue := [][]int{{row, col}}
+
+	for len(queue) > 0 {
+		shift := queue[0]
+		newRow, newCol := shift[0], shift[1]
+		queue = queue[1:]
+		checkAdjacent(matrix, &queue, newRow, newCol)
+	}
+}
+
 func isInBound(matrix [][]any, row, col int) bool {
 	return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
 }
-func paintPoints(matrix [][]any, row, col, curr int) {
-	if !isInBound(matrix, row, col) {
+func getPointFromCord(matrix [][]any, row, col, lastVal int, table map[string]bool, count, allCount *int) {
+
+	key := fmt.Sprintf("%d,%d", row, col)
+	if !isInBound(matrix, row, col) || matrix[row][col] == "#" {
 		return
 	}
-	if matrix[row][col] == "#" {
+	if matrix[row][col] == "E" {
+		fmt.Println(*count)
+		fmt.Println("AT LAST")
+	}
+	if matrix[row][col] != lastVal-1 {
+		return
+	}
+	if table[key] {
 		return
 	}
 
-	if matrix[row][col] == 0 {
-		matrix[row][col] = curr
-	}
+	*count += 1
+	tmp := matrix[row][col].(int)
+	table[key] = true
+
+	getPointFromCord(matrix, row+1, col, tmp, table, count, allCount)
+	getPointFromCord(matrix, row-1, col, tmp, table, count, allCount)
+	getPointFromCord(matrix, row, col+1, tmp, table, count, allCount)
+	getPointFromCord(matrix, row, col-1, tmp, table, count, allCount)
+
 }
 
-func pointMatrix(matrix [][]any, row, col, curr int, table map[string]matrixElement) {
-
-	for matrix[row][col] != "S" {
-		row = row - 1
-		paintPoints(matrix, row-1, col, curr)
-		row = row + 1
-		paintPoints(matrix, row+1, col, curr)
-		col = col + 1
-		paintPoints(matrix, row, col+1, curr)
-		col = col - 1
-		paintPoints(matrix, row, col-1, curr)
-		curr++
-	}
-	fmt.Println("XD XD")
-}
-
-//	func isInBound(matrix [][]string, row, col int) bool {
-//		return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
-//	}
-// func getPointFromCord(matrix [][]string, lastVal string, row, col int, count *int, allCount *int, table map[string]bool) {
-// 	key := fmt.Sprintf("%d,%d", row, col)
-
-// 	if !isInBound(matrix, row, col) {
-// 		*allCount += 1
-
-// 		return
-// 	}
-// 	if matrix[row][col] != lastVal {
-// 		*allCount += 1
-
-// 		return
-// 	}
-// 	if table[key] {
-// 		return
-// 	}
-
-// 	*count += 1
-// 	tmp := matrix[row][col]
-// 	table[key] = true
-
-// 	getPointFromCord(matrix, tmp, row+1, col, count, allCount, table)
-// 	getPointFromCord(matrix, tmp, row-1, col, count, allCount, table)
-// 	getPointFromCord(matrix, tmp, row, col+1, count, allCount, table)
-// 	getPointFromCord(matrix, tmp, row, col-1, count, allCount, table)
-
-// }
-
-type matrixElement struct {
-	Row    int
-	Col    int
-	Number int
-}
-
-func getAnswer(path string, times int) int {
+func getAnswer(path string) int {
 	matrix := parseStr(path)
 
 	total := 0
 	// 1,13
 	// print3d(matrix)
-	table := map[string]matrixElement{}
-	pointMatrix(matrix, 1, 13, 0, table)
+	pointMatrix(matrix, 1, 13)
 	print3d(matrix)
+
+	dirs := [][]int{
+		{-1, 0},
+		{1, 0},
+		{0, -1},
+		{0, 1},
+	}
+	row, col := 12, 1
+	for _, dir := range dirs {
+		table := map[string]bool{}
+
+		val, ok := matrix[row+dir[0]][col+dir[1]].(int)
+		count, allCount := 0, 0
+		if ok {
+			getPointFromCord(matrix, row+dir[0], col+dir[1], val+1, table, &count, &allCount)
+		}
+	}
+
 	// for _, val := range table {
 
 	// 	fmt.Println(val.Row, val.Col, val.Number)
@@ -137,16 +166,12 @@ func getStringFromNum(char string) string {
 }
 func main() {
 	path := "sample"
-	times := 25
 
 	if len(os.Args) > 1 {
 		path = os.Args[1]
 	}
-	if len(os.Args) > 2 {
-		times = stringToInt(os.Args[2])
-	}
 
-	result := getAnswer(path, times)
+	result := getAnswer(path)
 
 	fmt.Print(result)
 }
