@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
 )
 
 func stringToInt(char string) int {
@@ -26,6 +27,8 @@ type ButtonAndTarget struct {
 	Button2 Button
 	Target
 }
+
+const ADDAMOUNT = 10000000000000
 
 func getNumsFromStr(str string, letter string) (int, int) {
 	nums := strings.TrimSpace(strings.Split(str, fmt.Sprintf("Button %s: X+", letter))[1])
@@ -56,8 +59,8 @@ func parseStr(path string) []ButtonAndTarget {
 			Y: y2,
 		}
 		target := Target{
-			X: stringToInt(strings.Split(strings.Split(third, "Prize: X=")[1], ",")[0]),
-			Y: stringToInt(strings.Split(strings.TrimSpace(strings.Split(third, "Prize: X=")[1]), "Y=")[1]),
+			X: stringToInt(strings.Split(strings.Split(third, "Prize: X=")[1], ",")[0]) + +ADDAMOUNT,
+			Y: stringToInt(strings.Split(strings.TrimSpace(strings.Split(third, "Prize: X=")[1]), "Y=")[1]) + +ADDAMOUNT,
 		}
 		matrix = append(matrix, ButtonAndTarget{
 			Target:  target,
@@ -71,44 +74,19 @@ func getAnswer(path string) int {
 	matrix := parseStr(path)
 	total := 0
 	for i := 0; i < len(matrix); i++ {
+		// using cramer's rule just black magic
 		buttonAndTarget := matrix[i]
-		smallOffset := 0
+		D := (buttonAndTarget.Button1.X * buttonAndTarget.Button2.Y) - (buttonAndTarget.Button1.Y * buttonAndTarget.Button2.X)
+		X := (buttonAndTarget.Target.X * buttonAndTarget.Button2.Y) - (buttonAndTarget.Target.Y * buttonAndTarget.Button2.X)
+		Y := (buttonAndTarget.Button1.X * buttonAndTarget.Target.Y) - (buttonAndTarget.Target.X * buttonAndTarget.Button1.Y)
 
-		start := buttonAndTarget.Target.X / max(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X)
-		for i := start; i > 0; i-- {
-			res := buttonAndTarget.Target.X - i*max(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X)
-
-			if res%min(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X) == 0 {
-				smallOffset = res / min(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X)
-
-				if i*max(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X)+smallOffset*min(buttonAndTarget.Button1.X, buttonAndTarget.Button2.X) != buttonAndTarget.X {
-					continue
-				}
-				if buttonAndTarget.Button1.X > buttonAndTarget.Button2.X {
-					if i*buttonAndTarget.Button1.Y+smallOffset*buttonAndTarget.Button2.Y != buttonAndTarget.Y {
-						continue
-					}
-					total += i*3 + smallOffset
-				} else {
-					if i*buttonAndTarget.Button2.Y+smallOffset*buttonAndTarget.Button1.Y != buttonAndTarget.Y {
-						continue
-					}
-					total += i + smallOffset*3
-
-				}
-				break
-			}
-
+		X = X / D
+		Y = Y / D
+		if (X*buttonAndTarget.Button1.X)+(Y*buttonAndTarget.Button2.X) == buttonAndTarget.Target.X && (X*buttonAndTarget.Button1.Y)+Y*(buttonAndTarget.Button2.Y) == buttonAndTarget.Target.Y {
+			total += X*3 + Y
 		}
 	}
-	fmt.Println(total)
-	// total := 0
-
-	return 0
-}
-func getStringFromNum(char string) string {
-	num, _ := strconv.Atoi(char)
-	return fmt.Sprintf("%d", num)
+	return total
 }
 func main() {
 	path := "sample"
