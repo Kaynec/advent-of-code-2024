@@ -2,15 +2,38 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
+
+func insertSorted(pq []Node, node Node) []Node {
+	// Create a new slice to store the result, with enough capacity for the new node
+	result := make([]Node, 0, len(pq)+1)
+
+	// Copy elements from pq to result until we find the correct position
+	inserted := false
+	for _, el := range pq {
+		if !inserted && el.cost >= node.cost {
+			result = append(result, node)
+			inserted = true
+		}
+		result = append(result, el)
+	}
+
+	// If the node has not been inserted, it means it should be appended at the end
+	if !inserted {
+		result = append(result, node)
+	}
+
+	return result
+}
 
 func parseStr(path string) [][]string {
 	data, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := strings.TrimSpace(string(data))
 	matrix := [][]string{}
-	for _, line := range strings.Split(str, "\r\rdir") {
+	for _, line := range strings.Split(str, "\r\n") {
 		matrix = append(matrix, strings.Split(line, ""))
 	}
 	return matrix
@@ -18,92 +41,73 @@ func parseStr(path string) [][]string {
 
 type Node struct {
 	row, col, rdir, cdir, cost int
+	parent                     *Node
 }
 
-type PriorityQueue []*Node
-
-func (pq PriorityQueue) Len() int           { return len(pq) }
-func (pq PriorityQueue) Less(i, j int) bool { return pq[i].cost < pq[j].cost }
-func (pq PriorityQueue) Swap(i, j int)      { pq[i], pq[j] = pq[j], pq[i] }
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	*pq = append(*pq, x.(*Node))
-}
-
-func (pq *PriorityQueue) Pop() *Node {
-	old := *pq
-	n := len(old)
-	node := old[n-1]
-	*pq = old[0 : n-1]
-	return node
-}
-
-func getPointFromCord(matrix [][]string, row, col int) (int, bool) {
+func getPointFromCord(matrix [][]string, row, col int) int {
 	t := map[string]bool{}
+	goodPath := map[string]bool{}
+	response := math.MaxInt
+	pq := []Node{}
+	pq = append(pq, Node{row: row, col: col, rdir: 0, cdir: 1, cost: 0})
+	for i := 0; len(pq) > 0; i++ {
+		popped := pq[0]
+		pq = pq[1:]
 
-	pq := &PriorityQueue{}
-	pq.Push(&Node{
-		row:  row,
-		col:  col,
-		rdir: 0,
-		cdir: 1,
-		cost: 0,
-	})
-	fmt.Println(row, col)
-	for i := 0; pq.Len() > 0; i++ {
-		popped := pq.Pop()
-		row, col, rDir, cDir, cost := popped.row, popped.col, popped.rdir, popped.cdir, popped.cost
+		t[fmt.Sprintf("%d,%d,%d,%d", popped.row, popped.col, popped.rdir, popped.cdir)] = true
 
-		if matrix[row][col] == "E" {
-			fmt.Println("Xo Xo", row, col, rDir, cDir, cost)
+		if matrix[popped.row][popped.col] == "E" {
+			curr := popped
+
+			if popped.cost > response {
+				break
+			}
+			for curr.parent != nil {
+				goodPath[fmt.Sprintf("%d,%d", curr.row, curr.col)] = true
+				curr = *curr.parent
+			}
+			response = popped.cost
 		}
-		fmt.Println(row, col)
 
-		dirs := [][]int{
-			{row, col, rDir, cDir, cost + 1},
-			{row, col, cDir, rDir, cost + 1},
-			{row, col, -cDir, -rDir, cost + 1},
+		dirs := []Node{
+			{row: popped.row, col: popped.col, rdir: popped.rdir, cdir: popped.cdir, cost: popped.cost + 1},
+			{row: popped.row, col: popped.col, rdir: popped.cdir, cdir: popped.rdir, cost: popped.cost + 1001},
+			{row: popped.row, col: popped.col, rdir: -popped.cdir, cdir: -popped.rdir, cost: popped.cost + 1001},
 		}
 		for _, dir := range dirs {
-			row, col := row+dir[2], col+dir[3]
-			if matrix[row][col] == "#" || matrix[row][col] == "S" {
+			dir.row, dir.col = dir.row+dir.rdir, dir.col+dir.cdir
+			if matrix[dir.row][dir.col] == "#" {
 				continue
 			}
 
-			if key := fmt.Sprintf("%d,%d", row, col); !t[key] {
-				pq.Push(&Node{
-					row:  dir[0],
-					col:  dir[1],
-					rdir: dir[2],
-					cdir: dir[3],
-					cost: dir[4],
-				})
+			key := fmt.Sprintf("%d,%d,%d,%d", dir.row, dir.col, dir.rdir, dir.cdir)
+			if t[key] {
+
+			}
+			if !t[key] {
+				pq = insertSorted(pq, Node{row: dir.row, col: dir.col, rdir: dir.rdir, cdir: dir.cdir, cost: dir.cost, parent: &popped})
 			}
 
 		}
 
-		t[fmt.Sprintf("%d,%d", row, col)] = true
-
 	}
+	fmt.Println(len(goodPath) + 1)
 
-	return 0, true
+	return 0
 }
 
 func getAnswer(path string) int {
 	matrix := parseStr(path)
-	// row, col := 0, 0
+	row, col := 0, 0
 	for i := range matrix {
 		for j := range matrix[i] {
 			if matrix[i][j] == "S" {
-				// row, col = i, j
-				fmt.Println(matrix[i][j])
-				fmt.Println(i)
+				row, col = i, j
 			}
 		}
 	}
 
-	// fmt.Println(row)
-	// getPointFromCord(matrix, row, col)
+	getPointFromCord(matrix, row, col)
 	return 0
 }
 
@@ -116,5 +120,5 @@ func main() {
 
 	result := getAnswer(path)
 
-	fmt.Print(result)
+	fmt.Println(result, "result")
 }
