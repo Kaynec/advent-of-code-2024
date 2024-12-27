@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
-
 )
 
 func parseStr(path string) [][]string {
@@ -19,17 +17,18 @@ func parseStr(path string) [][]string {
 }
 
 type Node struct {
-	row, col, rdir, cdir int
-	parent               *Node
+	row, col, rdir, cdir, chances int
+	parent                        *Node
 }
 
-func getPointFromCord(matrix [][]string, row, col int) int {
+func findPath(matrix [][]string, row, col int, isFirstTime bool) (int, [][]int) {
 	t := map[string]bool{}
-	goodPath := map[string]bool{}
-	defaultPoints := [][]int{}
 	pq := []Node{}
+	pq = append(pq, Node{row: row, col: col, rdir: 0, cdir: 1, chances: 2})
+	goodPath := map[string]bool{}
 
-	pq = append(pq, Node{row: row, col: col, rdir: 0, cdir: 1})
+	defaultPoints := [][]int{}
+
 	for i := 0; len(pq) > 0; i++ {
 		popped := pq[0]
 		pq = pq[1:]
@@ -37,28 +36,39 @@ func getPointFromCord(matrix [][]string, row, col int) int {
 		t[fmt.Sprintf("%d,%d,%d,%d", popped.row, popped.col, popped.rdir, popped.cdir)] = true
 
 		if matrix[popped.row][popped.col] == "E" {
+
 			curr := popped
 
 			for curr.parent != nil {
 				goodPath[fmt.Sprintf("%d,%d", curr.row, curr.col)] = true
 				curr = *curr.parent
 			}
+			return len(goodPath), defaultPoints
 		}
 
 		dirs := []Node{
-			{row: popped.row + 1, col: popped.col},
-			{row: popped.row - 1, col: popped.col},
-			{row: popped.row, col: popped.col + 1},
-			{row: popped.row, col: popped.col - 1},
+			{row: popped.row, col: popped.col, rdir: 1, cdir: 0},
+			{row: popped.row, col: popped.col, rdir: -1, cdir: 0},
+			{row: popped.row, col: popped.col, rdir: 0, cdir: 1},
+			{row: popped.row, col: popped.col, rdir: 0, cdir: -1},
 		}
 		for _, dir := range dirs {
-			if matrix[dir.row][dir.col] == "#" {
-				if !containtsIntSlice(defaultPoints, []int{dir.row, dir.col}) {
-					defaultPoints = append(defaultPoints, []int{dir.row, dir.col})
-				}
 
+			if matrix[dir.row+dir.rdir][dir.col+dir.cdir] == "#" {
+				currRow, currCol := dir.row+dir.rdir, dir.col+dir.cdir
+				if isFirstTime {
+					if currRow == 0 || currRow >= len(matrix)-1 || currCol == 0 || currCol >= len(matrix[0])-1 {
+						continue
+					}
+					if !containsIntSlice(defaultPoints, []int{currRow, currCol, dir.row + dir.rdir*1, dir.col + (dir.cdir * 1)}) {
+						defaultPoints = append(defaultPoints, []int{currRow, currCol, dir.row + (dir.rdir * 1), dir.col + (dir.cdir * 1)})
+					}
+
+				}
 				continue
 			}
+			dir.row = dir.row + dir.rdir
+			dir.col = dir.col + dir.cdir
 
 			key := fmt.Sprintf("%d,%d,%d,%d", dir.row, dir.col, dir.rdir, dir.cdir)
 			if t[key] {
@@ -71,15 +81,47 @@ func getPointFromCord(matrix [][]string, row, col int) int {
 		}
 
 	}
-	sort.Slice(defaultPoints, func(i, j int) bool {
-		if defaultPoints[i][0] == defaultPoints[j][0] {
-			return defaultPoints[i][1] < defaultPoints[j][1]
+	return len(goodPath), defaultPoints
+}
 
+func getPointFromCord(matrix [][]string, row, col int) int {
+
+	initialCount, defaultPoints := findPath(matrix, row, col, true)
+
+	mapping := map[int]int{}
+	for i, point := range defaultPoints {
+		currPoint, nextPoint := []int{point[0], point[1]}, []int{point[2], point[3]}
+
+		currTmp, nextTmp := matrix[currPoint[0]][currPoint[1]], matrix[nextPoint[0]][nextPoint[1]]
+
+		if currTmp == "." || nextTmp == "." {
+			continue
 		}
-		return defaultPoints[i][0] < defaultPoints[j][0]
-	})
-	fmt.Println(len(goodPath), len(defaultPoints), defaultPoints)
-	// fmt.Println(defaultPoints)
+
+		matrix[currPoint[0]][currPoint[1]] = "."
+		matrix[nextPoint[0]][nextPoint[1]] = "."
+
+		count, _ := findPath(matrix, row, col, false)
+
+		matrix[currPoint[0]][currPoint[1]] = currTmp
+		matrix[nextPoint[0]][nextPoint[1]] = nextTmp
+		if count == 0 || count == initialCount {
+			continue
+		}
+
+		fmt.Println(i)
+
+		mapping[initialCount-count] += 1
+	}
+
+	total := 0
+	for key, value := range mapping {
+		if key >= 100 {
+			total += value
+		}
+	}
+
+	fmt.Println(mapping, total)
 
 	return 0
 }
@@ -94,7 +136,6 @@ func getAnswer(path string) int {
 			}
 		}
 	}
-
 	getPointFromCord(matrix, row, col)
 	return 0
 }
@@ -111,9 +152,9 @@ func main() {
 	fmt.Println(result, "result")
 }
 
-func containtsIntSlice(source [][]int, element []int) bool {
+func containsIntSlice(source [][]int, element []int) bool {
 	for _, value := range source {
-		if value[0] == element[0] && value[1] == element[1] {
+		if value[0] == element[0] && value[1] == element[1] && value[2] == element[2] && value[3] == element[3] {
 			return true
 		}
 	}
