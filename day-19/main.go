@@ -11,7 +11,7 @@ func isPossible(assignement []string, combination string) bool {
 
 	newString := strings.TrimSpace(combination)
 
-	for range len(combination) {
+	for range combination {
 
 		for _, assign := range assignement {
 			assign = strings.TrimSpace(assign)
@@ -42,5 +42,5 @@ func parseStr(path string) [][]string {
 	return matrix
 }
 func main() {
-	parseStr("sample")
+	parseStr(os.Args[1])
 }

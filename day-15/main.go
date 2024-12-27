@@ -3,14 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
-
-func stringToInt(char string) int {
-	val, _ := strconv.Atoi(char)
-	return val
-}
 
 func parseStr(path string) ([][]string, string) {
 	data, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
@@ -27,33 +21,90 @@ func parseStr(path string) ([][]string, string) {
 	return matrix, moves
 }
 
-// func isInBound(matrix [][]string, row, col int) bool {
-// 	return row >= 0 && row < len(matrix) && col >= 0 && col < len(matrix[0])
-// }
+func scaledWareHouse(matrix [][]string) [][]string {
+
+	mapping := map[string][]string{
+		"#": {"#", "#"},
+		"O": {"[", "]"},
+		".": {".", "."},
+		"@": {"@", "."},
+	}
+
+	newMatrix := [][]string{}
+	for row := range matrix {
+		newMatrix = append(newMatrix, []string{})
+		for col := range matrix[row] {
+			val := mapping[matrix[row][col]]
+			newMatrix[row] = append(newMatrix[row], val...)
+		}
+	}
+	return newMatrix
+}
+
+func getConnectedOnYAxis(matrix [][]string, row, col int, yStep int, res *[][]int, shouldMove *bool) {
+	if matrix[row][col] == "#" {
+		*shouldMove = false
+		return
+	}
+
+	if matrix[row][col] == "." {
+		return
+	}
+	charMap := map[string]int{
+		"[": +1,
+		"]": -1,
+	}
+	val := charMap[matrix[row][col]]
+
+	*res = append(*res, []int{row, col})
+	*res = append(*res, []int{row, col + val})
+	getConnectedOnYAxis(matrix, row+yStep, col, yStep, res, shouldMove)
+	getConnectedOnYAxis(matrix, row+yStep, col+val, yStep, res, shouldMove)
+}
 
 func moveAndMoveXd(matrix *[][]string, row, col *int, yStep, xStep int) {
 	newMatrix := *matrix
+
+	res := [][]int{}
 
 	if newMatrix[*row+yStep][*col+xStep] == "#" {
 		return
 	}
 
-	if newMatrix[*row+yStep][*col+xStep] == "O" {
+	// handle y movement
+	if yStep != 0 {
+		shouldMove := true
+		getConnectedOnYAxis(*matrix, *row+yStep, *col+xStep, yStep, &res, &shouldMove)
+		if !shouldMove {
+			return
+		}
+
+	}
+
+	// handle x movement
+	if newMatrix[*row+yStep][*col+xStep] == "[" || newMatrix[*row+yStep][*col+xStep] == "]" {
 		curr := newMatrix[*row+yStep][*col+xStep]
-		res := [][]int{}
 		for i := 1; curr != "#" && curr != "."; i++ {
-			res = append(res, []int{*row + yStep*i, *col + xStep*i})
-			curr = newMatrix[*row+yStep*i][*col+xStep*i]
+			curr = newMatrix[*row+yStep*i][*col+xStep*(i)]
+			if curr != "." && curr != "#" {
+				res = append(res, []int{*row + yStep, *col + xStep*i})
+			}
 		}
 		if curr == "#" {
 			return
 		}
-		for i := range res {
-			newMatrix[res[i][0]][res[i][1]] = "."
-			res[i][0] = *row + (yStep * (i + 1))
-			res[i][1] = *col + (xStep * (i + 1))
-			newMatrix[res[i][0]][res[i][1]] = "O"
-		}
+	}
+	shapes := []string{}
+	for _, el := range res {
+		shapes = append(shapes, newMatrix[el[0]][el[1]])
+	}
+	for _, el := range res {
+		newMatrix[el[0]][el[1]] = "."
+	}
+	for i, el := range res {
+		el[0] = el[0] + yStep
+		el[1] = el[1] + xStep
+		newMatrix[el[0]][el[1]] = shapes[i]
 	}
 
 	newMatrix[*row][*col] = "."
@@ -69,12 +120,22 @@ func getAnswer(path string) int {
 	robotX := 0
 	robotY := 0
 	matrix, moves := parseStr(path)
+	matrix = scaledWareHouse(matrix)
+
+	directions := map[string][]int{
+		"<": {0, -1},
+		">": {0, +1},
+		"^": {-1, 0},
+		"v": {+1, 0},
+	}
+
 	for row := range matrix {
 		for col := range matrix[row] {
 			if matrix[row][col] == "@" {
 				robotX = col
 				robotY = row
 				break
+
 			}
 		}
 	}
@@ -82,38 +143,23 @@ func getAnswer(path string) int {
 	matrix[robotY][robotX] = "."
 	for _, move := range strings.Split(moves, "") {
 
-		if move == "<" {
-			moveAndMoveXd(&matrix, &robotY, &robotX, 0, -1)
+		dir, ok := directions[move]
+		if !ok {
+			continue
 		}
-		if move == "v" {
-			moveAndMoveXd(&matrix, &robotY, &robotX, +1, 0)
-		}
-		if move == ">" {
-			moveAndMoveXd(&matrix, &robotY, &robotX, 0, +1)
-		}
-		if move == "^" {
-			moveAndMoveXd(&matrix, &robotY, &robotX, -1, 0)
-		}
+		moveAndMoveXd(&matrix, &robotY, &robotX, dir[0], dir[1])
 	}
-	for row := range matrix {
-		fmt.Println(matrix[row])
-	}
-	fmt.Println("\r\n\r\n")
 	for row := range matrix {
 		for col := range matrix[row] {
-			if matrix[row][col] != "O" {
+			if matrix[row][col] != "[" {
 				continue
 			}
-			fmt.Println()
 			total += 100*(row) + (col)
 		}
 	}
 	return total
 }
-func getStringFromNum(char string) string {
-	num, _ := strconv.Atoi(char)
-	return fmt.Sprintf("%d", num)
-}
+
 func main() {
 	path := "sample"
 
