@@ -2,66 +2,81 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"slices"
-	"sort"
 	"strings"
-
 )
 
-func parseStr(path string) []string {
+type Network = map[string]map[string]bool
+
+func recursoveFn(network Network, key string, cache map[string]bool, res *[]string) {
+	if cache[key] || key == "" || len(network[key]) == 0 {
+		return
+	}
+
+	cache[key] = true
+	if !slices.Contains(*res, key) {
+		*res = append(*res, key)
+	}
+outer:
+	for newNetwork, _ := range network[key] {
+		for _, oldKey := range *res {
+			if !network[oldKey][newNetwork] {
+				continue outer
+			}
+		}
+		recursoveFn(network, newNetwork, cache, res)
+	}
+
+}
+
+func parseStr(path string) Network {
 	data, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := strings.TrimSpace(string(data))
 
-	network := map[string][]string{}
+	network := Network{}
 
 	for _, num := range strings.Split(str, "\r\n") {
 		splitted := strings.Split(num, "-")
 		first, second := strings.TrimSpace(splitted[0]), strings.TrimSpace(splitted[1])
 
 		if len(network[first]) <= 0 {
-			network[first] = []string{second}
+			network[first] = map[string]bool{second: true}
 		}
 		if len(network[second]) <= 0 {
-			network[second] = []string{first}
+			network[second] = map[string]bool{first: true}
 		}
 
-		network[second] = append(network[second], first)
-		network[first] = append(network[first], second)
+		network[second][first] = true
+		network[first][second] = true
 
 	}
-
-	threeLinesXoXo := map[string]bool{}
-	for x := range network {
-		if !strings.HasPrefix(x, "t") {
-			continue
-		}
-		for _, y := range network[x] {
-
-			for _, z := range network[y] {
-
-				if !slices.Contains(network[z], x) || z == x {
-					continue
-				}
-
-				keys := []string{x, y, z}
-
-				sort.Strings(keys)
-
-				keySlice := strings.Split(fmt.Sprintf("%s", keys), "")
-
-				key := strings.Join(keySlice, "")
-
-				threeLinesXoXo[key] = true
-			}
-		}
-
-	}
-
-	fmt.Println(len(threeLinesXoXo))
-	return strings.Split(str, "")
+	return network
 }
 
 func main() {
-	parseStr(os.Args[1])
+	network := parseStr(os.Args[1])
+
+	currLength := math.MinInt
+	currRes := []string{}
+
+	for x := range network {
+		cache := map[string]bool{}
+		res := []string{}
+		recursoveFn(network, x, cache, &res)
+
+		if len(res) > currLength {
+
+			slices.Sort(res)
+			currRes = res
+			currLength = len(res)
+		}
+
+	}
+
+	answer := strings.Join(currRes, ",")
+
+	fmt.Println(answer)
+
 }
