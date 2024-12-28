@@ -6,64 +6,60 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
 )
 
 func parseStr(path string) []string {
 	data, _ := os.ReadFile(fmt.Sprintf("%s.txt", path))
 	str := strings.TrimSpace(string(data))
 
-	locks := []string{}
-
-	mapping := map[string]map[string]bool{}
+	network := map[string][]string{}
 
 	for _, num := range strings.Split(str, "\r\n") {
 		splitted := strings.Split(num, "-")
-		first, second := splitted[0], splitted[1]
+		first, second := strings.TrimSpace(splitted[0]), strings.TrimSpace(splitted[1])
 
-		if mapping[first] != nil {
-
-			mapping[first][second] = true
-		} else {
-			mapping[first] = map[string]bool{
-				second: true,
-			}
+		if len(network[first]) <= 0 {
+			network[first] = []string{second}
+		}
+		if len(network[second]) <= 0 {
+			network[second] = []string{first}
 		}
 
-		if mapping[second] != nil {
-
-			mapping[second][first] = true
-		} else {
-			mapping[second] = map[string]bool{
-				first: true,
-			}
-		}
+		network[second] = append(network[second], first)
+		network[first] = append(network[first], second)
 
 	}
 
-	threeLinesXoXo := []string{}
-	for key := range mapping {
+	threeLinesXoXo := map[string]bool{}
+	for x := range network {
+		if !strings.HasPrefix(x, "t") {
+			continue
+		}
+		for _, y := range network[x] {
 
-		for key2 := range mapping[key] {
-			for key3 := range mapping[key2] {
+			for _, z := range network[y] {
 
-				if key[0] != 't' && key2[0] != 't' && key3[0] != 't' || !mapping[key3][key] || key3 == key {
+				if !slices.Contains(network[z], x) || z == x {
 					continue
 				}
 
-				keySlice := strings.Split(fmt.Sprintf("%s%s%s", key, key2, key3), "")
-				sort.Strings(keySlice)
+				keys := []string{x, y, z}
+
+				sort.Strings(keys)
+
+				keySlice := strings.Split(fmt.Sprintf("%s", keys), "")
+
 				key := strings.Join(keySlice, "")
-				idx := slices.Index(threeLinesXoXo, key)
-				if idx == -1 {
-					threeLinesXoXo = append(threeLinesXoXo, key)
-				}
+
+				threeLinesXoXo[key] = true
 			}
 		}
 
 	}
 
 	fmt.Println(len(threeLinesXoXo))
-	return locks
+	return strings.Split(str, "")
 }
 
 func main() {
