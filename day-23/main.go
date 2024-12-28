@@ -10,20 +10,21 @@ import (
 
 type Network = map[string]map[string]bool
 
+// res2 is only for three connected computers xo xo
 func recursoveFn(network Network, key string, cache map[string]bool, res *[]string) {
 	if cache[key] || key == "" || len(network[key]) == 0 {
 		return
 	}
 
 	cache[key] = true
+
 	if !slices.Contains(*res, key) {
 		*res = append(*res, key)
 	}
-outer:
-	for newNetwork, _ := range network[key] {
+	for newNetwork := range network[key] {
 		for _, oldKey := range *res {
 			if !network[oldKey][newNetwork] {
-				continue outer
+				return
 			}
 		}
 		recursoveFn(network, newNetwork, cache, res)
@@ -61,6 +62,7 @@ func main() {
 	currLength := math.MinInt
 	currRes := []string{}
 
+	counter := 0
 	for x := range network {
 		cache := map[string]bool{}
 		res := []string{}
@@ -77,6 +79,6 @@ func main() {
 
 	answer := strings.Join(currRes, ",")
 
-	fmt.Println(answer)
+	fmt.Println(answer, counter)
 
 }
