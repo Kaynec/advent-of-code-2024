@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -56,13 +57,41 @@ func parseStr(path string) Network {
 	return network
 }
 
+func part1(network Network) int {
+	threeLinesXoXo := map[string]bool{}
+	for x := range network {
+		if !strings.HasPrefix(x, "t") {
+			continue
+		}
+		for y := range network[x] {
+
+			for z := range network[y] {
+
+				if !network[z][x] {
+					continue
+				}
+
+				keys := []string{x, y, z}
+
+				sort.Strings(keys)
+
+				key := strings.Join(strings.Split(fmt.Sprintf("%s", keys), ""), "")
+
+				threeLinesXoXo[key] = true
+			}
+		}
+
+	}
+
+	return len(threeLinesXoXo)
+}
+
 func main() {
 	network := parseStr(os.Args[1])
 
 	currLength := math.MinInt
 	currRes := []string{}
 
-	counter := 0
 	for x := range network {
 		cache := map[string]bool{}
 		res := []string{}
@@ -77,8 +106,8 @@ func main() {
 
 	}
 
-	answer := strings.Join(currRes, ",")
+	part2 := strings.Join(currRes, ",")
 
-	fmt.Println(answer, counter)
-
+	partone := part1(network)
+	fmt.Println(partone, part2)
 }
